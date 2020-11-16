@@ -1,7 +1,7 @@
-﻿using BarGraph.VittorCloud;  
+﻿using BarGraph.VittorCloud;
 using System.Collections;
-using System.Collections.Generic; 
-using UnityEngine; 
+using System.Collections.Generic;
+using UnityEngine;
 
 public class Analyzer : MonoBehaviour
 {
@@ -10,15 +10,15 @@ public class Analyzer : MonoBehaviour
     public int endIndex = 30;
     public bool useCacheIfAvailable = true;
     public float delayBetweenRequests = 0.5f;
- 
+
     [System.Serializable]
     public struct Party
     {
         public string name;
         public string number;
-        public BarGraphGenerator BarGraphGenerator;
     }
 
+    public BarGraphGenerator BarGraphGenerator;
     public List<Party> Parties;
 
     void Start()
@@ -39,8 +39,8 @@ public class Analyzer : MonoBehaviour
                 foreach (var subject in districtPointData.Subjects)
                 {
                     string numStr = subject.Vote.ToString();
-                    if (subject.Number == partyNumber && numStr.Length>1)
-                        counts[numStr[numStr.Length-2] - '0']++;
+                    if (subject.Number == partyNumber)
+                        counts[numStr[0] - '0']++;
                 }
             }
         }
@@ -50,27 +50,10 @@ public class Analyzer : MonoBehaviour
 
     public List<float> BenfordsValues;
 
-    private void showPartyAgainstBenford(Party party, List<ElectionDataGrabber.DistrictData> districtsData)
+    List<BarGraphDataSet> barGraphDataSets;
+
+    private void addPartyAgainstBenford(Party party, List<ElectionDataGrabber.DistrictData> districtsData)
     {
-        List<BarGraphDataSet> barGraphDataSets = new List<BarGraphDataSet>();
-
-
-        BarGraphDataSet benfordDataSet = new BarGraphDataSet();
-        benfordDataSet.ListOfBars = new List<XYBarValues>();
-        benfordDataSet.GroupName = "სტანდარტული განაწილება";
-        int ind = 0;
-        foreach (var benfordsValue in BenfordsValues)
-        {
-            XYBarValues xyBarValues = new XYBarValues();
-            xyBarValues.YValue = benfordsValue;
-            ind++;
-            xyBarValues.XValue = ind.ToString();
-            benfordDataSet.ListOfBars.Add(xyBarValues);
-        }
-
-
-        barGraphDataSets.Add(benfordDataSet);
-
         int[] counts = GetVotesNumericsCountForParty(districtsData, party.number);
         BarGraphDataSet partyDataSet = new BarGraphDataSet();
         partyDataSet.GroupName = party.name;
@@ -90,25 +73,39 @@ public class Analyzer : MonoBehaviour
             partyDataSet.ListOfBars.Add(xyBarValues);
         }
 
-        barGraphDataSets.Add(partyDataSet);
-
-        party.BarGraphGenerator.GeneratBarGraph(barGraphDataSets);
+        barGraphDataSets.Add(partyDataSet); 
     }
 
     private void OnDistrictsDataGrabbed(List<ElectionDataGrabber.DistrictData> districtsData)
     {
         StartCoroutine(StartShowCase(districtsData));
     }
- 
+
     private IEnumerator StartShowCase(List<ElectionDataGrabber.DistrictData> districtsData)
     {
+        barGraphDataSets = new List<BarGraphDataSet>();
+
+        BarGraphDataSet benfordDataSet = new BarGraphDataSet();
+        benfordDataSet.ListOfBars = new List<XYBarValues>();
+        benfordDataSet.GroupName = "სტანდარტული განაწილება";
+        int ind = 0;
+        foreach (var benfordsValue in BenfordsValues)
+        {
+            XYBarValues xyBarValues = new XYBarValues();
+            xyBarValues.YValue = benfordsValue;
+            ind++;
+            xyBarValues.XValue = ind.ToString();
+            benfordDataSet.ListOfBars.Add(xyBarValues);
+        } 
+        barGraphDataSets.Add(benfordDataSet);
+        
         foreach (var party in Parties)
         {
-           // barGraphGenerator.res
-            showPartyAgainstBenford(party, districtsData);
-            yield return new WaitForSeconds(3);
-            party.BarGraphGenerator.gameObject.SetActive(false);
+            // barGraphGenerator.res
+            addPartyAgainstBenford(party, districtsData);
         }
+
+        BarGraphGenerator.GeneratBarGraph(barGraphDataSets);
         yield break;
     }
 }
